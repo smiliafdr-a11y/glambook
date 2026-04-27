@@ -1,132 +1,172 @@
 'use client'
-import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
+import { Prestation } from '@/types'
 
-export default function HomePage() {
+const CATEGORIES = ['Ongles', 'Cheveux', 'Soin', 'Maquillage', 'Épilation', 'Autre']
+
+export default function PrestationsPage() {
+  const [prestations, setPrestations] = useState<Prestation[]>([])
+  const [prestataireId, setPrestataireId] = useState('')
+  const [showModal, setShowModal] = useState(false)
+  const [editing, setEditing] = useState<Prestation | null>(null)
+  const [form, setForm] = useState({ nom: '', description: '', duree_minutes: 60, prix: 0, acompte: 0, categorie: 'Ongles' })
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => { init() }, [])
+
+  async function init() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data: pres } = await supabase.from('prestataires').select('id').eq('user_id', user.id).single()
+    if (!pres) return
+    setPrestataireId(pres.id)
+    load(pres.id)
+  }
+
+  async function load(pid: string) {
+    const { data } = await supabase.from('prestations').select('*').eq('prestataire_id', pid).order('categorie').order('nom')
+    setPrestations(data || [])
+  }
+
+  function openAdd() {
+    setEditing(null)
+    setForm({ nom: '', description: '', duree_minutes: 60, prix: 0, acompte: 0, categorie: 'Ongles' })
+    setShowModal(true)
+  }
+
+  function openEdit(p: Prestation) {
+    setEditing(p)
+    setForm({ nom: p.nom, description: p.description || '', duree_minutes: p.duree_minutes, prix: p.prix, acompte: p.acompte, categorie: p.categorie })
+    setShowModal(true)
+  }
+
+  async function save() {
+    setSaving(true)
+    if (editing) {
+      await supabase.from('prestations').update(form).eq('id', editing.id)
+    } else {
+      await supabase.from('prestations').insert({ ...form, prestataire_id: prestataireId })
+    }
+    setSaving(false)
+    setShowModal(false)
+    load(prestataireId)
+  }
+
+  async function toggleActif(p: Prestation) {
+    await supabase.from('prestations').update({ actif: !p.actif }).eq('id', p.id)
+    load(prestataireId)
+  }
+
+  const categories = Array.from(new Set(prestations.map(p => p.categorie)))
+
   return (
-    <div className="min-h-screen bg-white">
-
-      {/* NAV */}
-      <nav className="border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-        <div className="text-xl font-bold text-brand-500">GlamBook</div>
-        <div className="flex gap-3">
-          <Link href="/auth/login" className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">
-            Connexion
-          </Link>
-          <Link href="/auth/register" className="px-4 py-2 text-sm bg-brand-500 text-white rounded-lg hover:bg-brand-600 font-medium">
-            Commencer gratuitement
-          </Link>
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Mes prestations</h1>
+          <p className="text-sm text-gray-400 mt-0.5">{prestations.length} prestations configurées</p>
         </div>
-      </nav>
+        <button onClick={openAdd} className="bg-brand-500 text-white text-sm px-4 py-2 rounded-lg font-medium hover:bg-brand-600">
+          + Nouvelle prestation
+        </button>
+      </div>
 
-      {/* HERO */}
-      <section className="max-w-4xl mx-auto px-6 py-20 text-center">
-        <div className="inline-block bg-brand-50 text-brand-600 text-xs font-semibold px-3 py-1 rounded-full mb-6">
-          ✨ La plateforme beauté pensée pour vous
+      {prestations.length === 0 ? (
+        <div className="text-center py-20 bg-white rounded-2xl border border-gray-100">
+          <div className="text-4xl mb-3">✂️</div>
+          <h3 className="font-semibold text-gray-900 mb-2">Aucune prestation</h3>
+          <p className="text-sm text-gray-400 mb-4">Ajoutez vos prestations pour que les clientes puissent réserver.</p>
+          <button onClick={openAdd} className="bg-brand-500 text-white text-sm px-5 py-2.5 rounded-lg font-medium hover:bg-brand-600">
+            Ajouter ma première prestation
+          </button>
         </div>
-        <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
-          Le Doctolib de la beauté,<br/>
-          <span className="text-brand-500">enfin fait pour vous</span>
-        </h1>
-        <p className="text-xl text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
-          Réservation en ligne, acomptes automatiques, fiche cliente privée, liste d'attente intelligente. 
-          Tout ce que Planity ne fait pas.
-        </p>
-        <div className="flex gap-4 justify-center flex-wrap">
-          <Link href="/auth/register?role=prestataire" className="px-8 py-4 bg-brand-500 text-white rounded-xl font-semibold text-lg hover:bg-brand-600 transition-colors shadow-lg shadow-brand-200">
-            Je suis prestataire →
-          </Link>
-          <Link href="/auth/register?role=cliente" className="px-8 py-4 bg-white text-gray-700 rounded-xl font-semibold text-lg hover:bg-gray-50 transition-colors border border-gray-200">
-            Je suis cliente
-          </Link>
-        </div>
-      </section>
-
-      {/* FEATURES */}
-      <section className="bg-gray-50 py-20 px-6">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-14">
-            Tout ce dont vous avez besoin
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { icon: '📅', title: 'Réservation en ligne', desc: 'Vos clientes réservent 24h/24 avec paiement d\'acompte intégré. Fini les no-shows.' },
-              { icon: '🔔', title: 'Liste d\'attente auto', desc: 'Une cliente annule ? Toutes celles en attente sont notifiées instantanément. Aucun créneau perdu.' },
-              { icon: '📋', title: 'Fiche cliente privée', desc: 'Allergies, préférences, historique complet de chaque prestation. Votre carnet de soin numérique.' },
-              { icon: '💬', title: 'Chat intégré', desc: 'Vos clientes vous contactent directement dans l\'app. Plus de WhatsApp perdu dans les notifications.' },
-              { icon: '💳', title: 'Acomptes sécurisés', desc: 'Stripe gère les paiements. L\'acompte est retenu en cas d\'annulation tardive. Votre temps est protégé.' },
-              { icon: '⭐', title: 'Avis vérifiés', desc: 'Seules vos vraies clientes peuvent laisser un avis. Construisez votre réputation en ligne.' },
-            ].map((f, i) => (
-              <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-md transition-shadow">
-                <div className="text-3xl mb-4">{f.icon}</div>
-                <h3 className="font-semibold text-gray-900 mb-2">{f.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* TARIFS */}
-      <section className="py-20 px-6">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-4">Tarifs simples</h2>
-          <p className="text-center text-gray-500 mb-14">Commencez gratuitement, évoluez quand vous êtes prête.</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              {
-                name: 'Starter', price: '0 €', period: '/mois',
-                desc: 'Pour tester',
-                features: ['30 RDV/mois', 'Réservation en ligne', 'Agenda', '1 prestataire'],
-                cta: 'Commencer', highlight: false
-              },
-              {
-                name: 'Pro ✨', price: '19 €', period: '/mois',
-                desc: 'Le plus populaire',
-                features: ['RDV illimités', 'Acomptes Stripe', 'SMS + Email auto', 'Liste d\'attente', 'Fiche cliente', 'Chat', 'Avis'],
-                cta: 'Choisir Pro', highlight: true
-              },
-              {
-                name: 'Salon', price: '39 €', period: '/mois',
-                desc: 'Pour les équipes',
-                features: ['Tout Pro inclus', 'Jusqu\'à 3 prestataires', 'Stats avancées', 'Page salon perso', 'Support prioritaire'],
-                cta: 'Choisir Salon', highlight: false
-              },
-            ].map((p, i) => (
-              <div key={i} className={`rounded-2xl p-6 border-2 ${p.highlight ? 'border-brand-500 bg-brand-50 shadow-xl shadow-brand-100' : 'border-gray-200 bg-white'}`}>
-                {p.highlight && <div className="text-xs font-bold text-brand-600 mb-3 uppercase tracking-wide">⭐ Recommandé</div>}
-                <div className="text-lg font-bold text-gray-900 mb-1">{p.name}</div>
-                <div className="text-sm text-gray-400 mb-3">{p.desc}</div>
-                <div className="mb-6">
-                  <span className="text-4xl font-bold text-gray-900">{p.price}</span>
-                  <span className="text-gray-400 text-sm">{p.period}</span>
+      ) : (
+        categories.map(cat => (
+          <div key={cat} className="mb-6">
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">{cat}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {prestations.filter(p => p.categorie === cat).map(p => (
+                <div key={p.id} className={`bg-white rounded-xl border p-4 ${p.actif ? 'border-gray-100' : 'border-gray-100 opacity-50'}`}>
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="font-semibold text-gray-900 text-sm">{p.nom}</div>
+                    <div className="flex gap-1">
+                      <button onClick={() => openEdit(p)} className="text-xs text-gray-400 hover:text-brand-500 px-2 py-0.5 rounded">✏️</button>
+                      <button onClick={() => toggleActif(p)} className={`text-xs px-2 py-0.5 rounded ${p.actif ? 'text-green-600 hover:text-red-500' : 'text-gray-400 hover:text-green-600'}`}>
+                        {p.actif ? '✓' : '○'}
+                      </button>
+                    </div>
+                  </div>
+                  {p.description && <p className="text-xs text-gray-400 mb-2">{p.description}</p>}
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-gray-400">⏱ {p.duree_minutes < 60 ? `${p.duree_minutes}min` : `${Math.floor(p.duree_minutes / 60)}h${p.duree_minutes % 60 ? (p.duree_minutes % 60) + 'min' : ''}`}</div>
+                    <div className="text-right">
+                      <div className="font-bold text-brand-500">{p.prix} €</div>
+                      {p.acompte > 0 && <div className="text-xs text-gray-400">Acompte {p.acompte} €</div>}
+                    </div>
+                  </div>
                 </div>
-                <ul className="space-y-2 mb-6">
-                  {p.features.map((f, j) => (
-                    <li key={j} className="flex items-center gap-2 text-sm text-gray-600">
-                      <span className="text-green-500 font-bold">✓</span> {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/auth/register?role=prestataire" className={`block text-center py-3 rounded-xl font-semibold text-sm transition-colors ${p.highlight ? 'bg-brand-500 text-white hover:bg-brand-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                  {p.cta}
-                </Link>
+              ))}
+            </div>
+          </div>
+        ))
+      )}
+
+      {/* MODAL */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={e => { if (e.target === e.currentTarget) setShowModal(false) }}>
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
+            <div className="bg-brand-500 px-5 py-4 flex items-center justify-between">
+              <h3 className="text-white font-semibold">{editing ? 'Modifier la prestation' : 'Nouvelle prestation'}</h3>
+              <button onClick={() => setShowModal(false)} className="text-white/80 hover:text-white text-xl">✕</button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Nom *</label>
+                <input value={form.nom} onChange={e => setForm(f => ({ ...f, nom: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500" placeholder="ex: Pose gel couleur" />
               </div>
-            ))}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Catégorie</label>
+                <select value={form.categorie} onChange={e => setForm(f => ({ ...f, categorie: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500">
+                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Description</label>
+                <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                  rows={2} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500 resize-none"
+                  placeholder="Description courte pour les clientes..." />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Durée (min)</label>
+                  <input type="number" value={form.duree_minutes} onChange={e => setForm(f => ({ ...f, duree_minutes: Number(e.target.value) }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500" min={15} step={15} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Prix (€)</label>
+                  <input type="number" value={form.prix} onChange={e => setForm(f => ({ ...f, prix: Number(e.target.value) }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500" min={0} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Acompte (€)</label>
+                  <input type="number" value={form.acompte} onChange={e => setForm(f => ({ ...f, acompte: Number(e.target.value) }))}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-brand-500" min={0} />
+                </div>
+              </div>
+            </div>
+            <div className="px-5 pb-5 flex gap-3">
+              <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-lg text-sm">Annuler</button>
+              <button onClick={save} disabled={saving || !form.nom}
+                className="flex-1 py-2.5 bg-brand-500 text-white rounded-lg text-sm font-medium hover:bg-brand-600 disabled:opacity-40">
+                {saving ? 'Enregistrement...' : editing ? 'Modifier' : 'Créer'}
+              </button>
+            </div>
           </div>
         </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer className="border-t border-gray-100 py-10 px-6 text-center text-sm text-gray-400">
-        <div className="font-bold text-brand-500 text-lg mb-2">GlamBook</div>
-        <p>La plateforme beauté pensée par et pour les prestataires.</p>
-        <div className="flex gap-6 justify-center mt-4">
-          <Link href="/mentions-legales" className="hover:text-gray-600">Mentions légales</Link>
-          <Link href="/cgv" className="hover:text-gray-600">CGV</Link>
-          <Link href="/contact" className="hover:text-gray-600">Contact</Link>
-        </div>
-      </footer>
-
+      )}
     </div>
   )
 }
