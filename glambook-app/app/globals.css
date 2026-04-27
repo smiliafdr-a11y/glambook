@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --brand: #FF80B5;
+  --brand-dark: #e066a0;
+  --bg: #ffffff;
+  --bg2: #fdf8fb;
+  --bg3: #f3f4f6;
+  --border: #e5e7eb;
+  --border2: #f3f4f6;
+  --text: #111111;
+  --text2: #6b7280;
+  --text3: #9ca3af;
+  --sidebar: #111111;
+  --sidebar-text: rgba(255,255,255,0.5);
+  --sidebar-active: rgba(255,128,181,0.12);
+  --card: #ffffff;
+}
+
+[data-theme="dark"] {
+  --bg: #0f0f0f;
+  --bg2: #1a1a1a;
+  --bg3: #222222;
+  --border: #2a2a2a;
+  --border2: #222222;
+  --text: #f0f0f0;
+  --text2: #aaaaaa;
+  --text3: #666666;
+  --sidebar: #0a0a0a;
+  --sidebar-text: rgba(255,255,255,0.4);
+  --sidebar-active: rgba(255,128,181,0.15);
+  --card: #1a1a1a;
+}
+
+* { box-sizing: border-box; transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
+body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* CLASSES THÈME */
+.bg-theme { background: var(--bg) !important; }
+.bg-theme2 { background: var(--bg2) !important; }
+.bg-theme3 { background: var(--bg3) !important; }
+.bg-card { background: var(--card) !important; }
+.border-theme { border-color: var(--border) !important; }
+.border-theme2 { border-color: var(--border2) !important; }
+.text-theme { color: var(--text) !important; }
+.text-theme2 { color: var(--text2) !important; }
+.text-theme3 { color: var(--text3) !important; }
+.sidebar-bg { background: var(--sidebar) !important; }
