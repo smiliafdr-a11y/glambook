@@ -50,18 +50,18 @@ export default function CarnetBeautePage() {
             <div className="text-xs opacity-80">Cliente depuis {cliente?.premiere_visite ? new Date(cliente.premiere_visite).toLocaleDateString('fr-FR',{month:'long',year:'numeric'}) : 'récemment'}</div>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          <div style={{background:'var(--card)'}}>
-            <div className="font-bold text-xl">{rdvs.length}</div>
-            <div className="text-xs opacity-80">Prestations</div>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8}}>
+          <div style={{background:'rgba(255,255,255,0.2)', borderRadius:12, padding:'10px 8px', textAlign:'center'}}>
+            <div style={{fontWeight:700, fontSize:20, color:'#fff'}}>{rdvs.length}</div>
+            <div style={{fontSize:11, opacity:0.8, color:'#fff'}}>Prestations</div>
           </div>
-          <div style={{background:'var(--card)'}}>
-            <div className="font-bold text-xl">{totalDepense} €</div>
-            <div className="text-xs opacity-80">Total dépensé</div>
+          <div style={{background:'rgba(255,255,255,0.2)', borderRadius:12, padding:'10px 8px', textAlign:'center'}}>
+            <div style={{fontWeight:700, fontSize:20, color:'#fff'}}>{totalDepense} €</div>
+            <div style={{fontSize:11, opacity:0.8, color:'#fff'}}>Total dépensé</div>
           </div>
-          <div style={{background:'var(--card)'}}>
-            <div className="font-bold text-xl">{avis.length}</div>
-            <div className="text-xs opacity-80">Avis laissés</div>
+          <div style={{background:'rgba(255,255,255,0.2)', borderRadius:12, padding:'10px 8px', textAlign:'center'}}>
+            <div style={{fontWeight:700, fontSize:20, color:'#fff'}}>{avis.length}</div>
+            <div style={{fontSize:11, opacity:0.8, color:'#fff'}}>Avis laissés</div>
           </div>
         </div>
       </div>
