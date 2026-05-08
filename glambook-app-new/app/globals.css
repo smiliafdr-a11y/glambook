@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg: #FAF8F5;
+  --bg2: #F3EDE7;
+  --card: #FFFFFF;
+  --border: #E6DDD5;
+  --text: #1C1510;
+  --text2: #7D7168;
+  --text3: #B5A99F;
+  --accent: #C24567;
+  --accent-d: #A33856;
+  --accent-bg: #FAF0F3;
+  --accent-mid: #EBCAD4;
+  --sidebar: #0E0B14;
+  --sidebar-text: rgba(240,234,248,0.42);
+  --sidebar-active: rgba(194,69,103,0.16);
+  --ok: #2D8A5F;
+  --ok-bg: #EDF7F2;
+  --warn: #946B10;
+  --warn-bg: #FDF6E7;
+  --shadow: 0 2px 12px rgba(0,0,0,.07);
+}
+
+[data-theme="dark"] {
+  --bg: #100D16;
+  --bg2: #1B1626;
+  --card: #221C2E;
+  --border: #342B42;
+  --text: #F0EAF8;
+  --text2: #9A8DB0;
+  --text3: #58507A;
+  --accent: #E05C7F;
+  --accent-d: #C84A6B;
+  --accent-bg: #261420;
+  --accent-mid: #4A253A;
+  --sidebar: #08060E;
+  --sidebar-text: rgba(240,234,248,0.38);
+  --sidebar-active: rgba(224,92,127,0.18);
+  --ok: #4CAF88;
+  --ok-bg: #0F2A1F;
+  --warn: #D4A038;
+  --warn-bg: #241A08;
+  --shadow: 0 2px 14px rgba(0,0,0,.22);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+* { transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+.font-display { font-family: 'Playfair Display', serif; }
+.bg-theme { background: var(--bg) !important; }
+.bg-theme2 { background: var(--bg2) !important; }
+.bg-card { background: var(--card) !important; }
+.border-theme { border-color: var(--border) !important; }
+.text-theme { color: var(--text) !important; }
+.text-theme2 { color: var(--text2) !important; }
+.text-theme3 { color: var(--text3) !important; }
+.sidebar-bg { background: var(--sidebar) !important; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.anim-up { animation: fadeUp 0.2s ease-out both; }
