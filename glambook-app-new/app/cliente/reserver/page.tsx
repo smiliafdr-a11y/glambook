@@ -145,24 +145,31 @@ export default function ReserverPage() {
 
       {/* ÉTAPE 1 */}
       {step === 1 && (
-        <div className="space-y-2">
+        <div style={{display:'flex', flexDirection:'column', gap:10}}>
           {prestations.map(p => (
             <button key={p.id} onClick={() => { setSelectedPrestation(p); setStep(2) }}
-              style={{background:'var(--card)'}}>
-              <div className="flex justify-between items-center">
+              style={{
+                width:'100%', textAlign:'left', background:'var(--card)',
+                border:'1px solid var(--border)', borderRadius:14,
+                padding:'16px 18px', cursor:'pointer',
+                boxShadow:'var(--shadow)'
+              }}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
                 <div>
-                  <div className="font-semibold">{p.nom}</div>
-                  <div className="text-xs mt-0.5">{p.duree_minutes < 60 ? `${p.duree_minutes}min` : `${Math.floor(p.duree_minutes/60)}h${p.duree_minutes%60 ? p.duree_minutes%60+'min':''}`}</div>
-                  {p.description && <div className="text-xs mt-1">{p.description}</div>}
+                  <div style={{fontWeight:600, fontSize:14, color:'var(--text)', marginBottom:4}}>{p.nom}</div>
+                  <div style={{fontSize:12, color:'var(--text3)'}}>
+                    ⏱ {p.duree_minutes < 60 ? `${p.duree_minutes}min` : `${Math.floor(p.duree_minutes/60)}h${p.duree_minutes%60 ? p.duree_minutes%60+'min':''}`}
+                  </div>
+                  {p.description && <div style={{fontSize:12, color:'var(--text2)', marginTop:4}}>{p.description}</div>}
                 </div>
-                <div className="text-right ml-4">
-                  <div className="font-bold text-lg" style={{color:'var(--accent)'}}>{p.prix} €</div>
-                  {p.acompte > 0 && <div className="text-xs">Acompte {p.acompte} €</div>}
+                <div style={{textAlign:'right', marginLeft:16, flexShrink:0}}>
+                  <div style={{fontWeight:700, fontSize:18, color:'var(--accent)'}}>{p.prix} €</div>
+                  {p.acompte > 0 && <div style={{fontSize:11, color:'var(--text3)', marginTop:2}}>Acompte {p.acompte} €</div>}
                 </div>
               </div>
             </button>
           ))}
-          {prestations.length === 0 && <div className="text-center py-10 text-sm">Aucune prestation disponible</div>}
+          {prestations.length === 0 && <div style={{textAlign:'center', padding:'40px 0', color:'var(--text3)', fontSize:13}}>Aucune prestation disponible</div>}
         </div>
       )}
 
@@ -170,8 +177,8 @@ export default function ReserverPage() {
       {step === 2 && (
         <div>
           <button onClick={() => setStep(1)} className="text-sm mb-4 flex items-center gap-1" style={{color:'var(--accent)'}}>← Changer de prestation</button>
-          <div style={{background:'var(--card)'}}>
-            <div className="flex items-center justify-between mb-3">
+          <div style={{background:'var(--card)', border:'1px solid var(--border)', borderRadius:14, padding:'16px', marginBottom:12}}>
+            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12}}>
               <button onClick={() => changeMonth(-1)} className="w-8 h-8 border rounded-lg flex items-center justify-center">‹</button>
               <div className="font-semibold">{MONTHS[curMonth]} {curYear}</div>
               <button onClick={() => changeMonth(1)} className="w-8 h-8 border rounded-lg flex items-center justify-center">›</button>
@@ -204,8 +211,8 @@ export default function ReserverPage() {
           </div>
 
           {selectedDay && (
-            <div style={{background:'var(--card)'}}>
-              <div className="text-sm font-medium text-gray-700 mb-3">Créneaux disponibles</div>
+            <div style={{background:'var(--card)', border:'1px solid var(--border)', borderRadius:14, padding:'16px', marginBottom:12}}>
+              <div style={{fontSize:13, fontWeight:600, color:'var(--text2)', marginBottom:12}}>Créneaux disponibles</div>
               <div className="grid grid-cols-4 gap-2">
                 {creneauxDispo(selectedDay).map(h => (
                   <button key={h} onClick={() => setSelectedHeure(h)}
@@ -231,8 +238,8 @@ export default function ReserverPage() {
         <div>
           <button onClick={() => setStep(2)} className="text-sm mb-4 flex items-center gap-1" style={{color:'var(--accent)'}}>← Modifier le créneau</button>
 
-          <div style={{background:'var(--card)'}}>
-            <div className="text-xs font-semibold uppercase tracking-wide mb-3">Récapitulatif</div>
+          <div style={{background:'var(--card)', border:'1px solid var(--border)', borderRadius:14, padding:'16px 18px', marginBottom:12}}>
+            <div style={{fontSize:11, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:12}}>Récapitulatif</div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm"><span className="text-theme2">Prestation</span><span className="font-medium">{selectedPrestation?.nom}</span></div>
               <div className="flex justify-between text-sm"><span className="text-theme2">Date</span><span className="font-medium">{selectedDay} {MONTHS[curMonth]} {curYear}</span></div>
@@ -245,8 +252,8 @@ export default function ReserverPage() {
           </div>
 
           {/* MODE DE PAIEMENT */}
-          <div style={{background:'var(--card)'}}>
-            <div className="text-sm font-semibold text-gray-700 mb-3">Mode de paiement</div>
+          <div style={{background:'var(--card)', border:'1px solid var(--border)', borderRadius:14, padding:'16px 18px', marginBottom:12}}>
+            <div style={{fontSize:13, fontWeight:600, color:'var(--text)', marginBottom:12}}>Mode de paiement</div>
             <div className="space-y-2">
               {selectedPrestation?.acompte > 0 && (
                 <button onClick={() => setModePaiement('acompte')}
