@@ -201,7 +201,7 @@ export default function ClientesPage() {
               <h3 className="text-white font-semibold">Nouvelle cliente</h3>
               <button onClick={() => setShowAddModal(false)} className="text-white/80 hover:text-white text-xl">✕</button>
             </div>
-            <div className="p-5 space-y-3">
+            <div style={{padding:24, display:"flex", flexDirection:"column", gap:14}}>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold mb-1">Prénom *</label>
@@ -236,7 +236,7 @@ export default function ClientesPage() {
                   placeholder="Préférences, remarques..." />
               </div>
             </div>
-            <div className="px-5 pb-5 flex gap-3">
+            <div style={{padding:"0 24px 24px", display:"flex", gap:12}}>
               <button onClick={() => setShowAddModal(false)} className="flex-1 py-2.5 border text-gray-600 rounded-lg text-sm">Annuler</button>
               <button onClick={addCliente} disabled={!newCliente.prenom || !newCliente.nom}
                 className="flex-1 py-2.5 bg-brand-500 text-white rounded-lg text-sm font-medium hover:bg-brand-600 disabled:opacity-40">
