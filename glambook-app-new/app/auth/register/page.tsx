@@ -9,7 +9,7 @@ function RegisterForm() {
   const searchParams = useSearchParams()
   const defaultRole = searchParams.get('role') || 'prestataire'
   const [role, setRole] = useState(defaultRole as 'prestataire' | 'cliente')
-  const [form, setForm] = useState({ prenom: '', nom: '', email: '', password: '' })
+  const [form, setForm] = useState({ prenom: '', nom: '', email: '', telephone: '', password: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -44,17 +44,56 @@ function RegisterForm() {
       if (presError) { setError(presError.message); setLoading(false); return }
       router.push('/prestataire/dashboard')
     } else {
-      // Cliente — récupérer la première prestataire disponible
-      const { data: pres } = await supabase.from('prestataires').select('id').limit(1).single()
-      const { error: clienteError } = await supabase.from('clientes').insert({
-        user_id: data.user.id,
-        nom: form.nom,
-        prenom: form.prenom,
-        email: form.email,
-        prestataire_id: pres?.id || null,
-        premiere_visite: new Date().toISOString().split('T')[0],
-      })
-      if (clienteError) { setError(clienteError.message); setLoading(false); return }
+      // Cliente — chercher si une fiche existe déjà par email OU téléphone (créée par prestataire)
+      let ficheExistante: any = null
+
+      if (form.email) {
+        const { data: parEmail } = await supabase
+          .from('clientes')
+          .select('id, prestataire_id')
+          .eq('email', form.email)
+          .is('user_id', null)
+          .maybeSingle()
+        if (parEmail) ficheExistante = parEmail
+      }
+
+      if (!ficheExistante && form.telephone) {
+        const telClean = form.telephone.replace(/\s/g, '')
+        const { data: parTel } = await supabase
+          .from('clientes')
+          .select('id, prestataire_id')
+          .eq('telephone', telClean)
+          .is('user_id', null)
+          .maybeSingle()
+        if (parTel) ficheExistante = parTel
+      }
+
+      if (ficheExistante) {
+        // Lier le compte à la fiche existante — la cliente verra ses RDV automatiquement
+        await supabase.from('clientes')
+          .update({
+            user_id: data.user.id,
+            prenom: form.prenom,
+            nom: form.nom,
+            email: form.email,
+            telephone: form.telephone.replace(/\s/g, '') || undefined,
+          })
+          .eq('id', ficheExistante.id)
+      } else {
+        // Nouvelle cliente — créer sa fiche
+        const { data: pres } = await supabase.from('prestataires').select('id').limit(1).single()
+        const { error: clienteError } = await supabase.from('clientes').insert({
+          user_id: data.user.id,
+          nom: form.nom,
+          prenom: form.prenom,
+          email: form.email,
+          telephone: form.telephone.replace(/\s/g, '') || null,
+          prestataire_id: pres?.id || null,
+          premiere_visite: new Date().toISOString().split('T')[0],
+        })
+        if (clienteError) { setError(clienteError.message); setLoading(false); return }
+      }
+
       router.push('/cliente/accueil')
     }
   }
@@ -95,6 +134,14 @@ function RegisterForm() {
             className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none"
             placeholder="nadia@glambook.fr" required />
         </div>
+        {role === 'cliente' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+            <input type="tel" value={form.telephone} onChange={e => update('telephone', e.target.value)}
+              style={{width:'100%', border:'1.5px solid var(--border)', borderRadius:10, padding:'10px 14px', fontSize:13, outline:'none', background:'var(--bg2)', color:'var(--text)'}}
+              placeholder="06 XX XX XX XX" />
+          </div>
+        )}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
           <input type="password" value={form.password} onChange={e => update('password', e.target.value)}
