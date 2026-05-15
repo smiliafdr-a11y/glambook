@@ -47,7 +47,7 @@ export default function ListeAttentePage() {
   if (loading) return <div className="p-6 text-sm">Chargement...</div>
 
   return (
-    <div className="p-6 max-w-3xl">
+    <div style={{padding:32, maxWidth:760}}>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold">Liste d'attente</h1>
