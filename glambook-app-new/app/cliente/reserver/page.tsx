@@ -90,7 +90,7 @@ function ReserverContent() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       // Pas connectée — rediriger vers inscription avec toutes les infos du RDV
-      const dateStr = \`\${curYear}-\${String(curMonth+1).padStart(2,'0')}-\${String(selectedDay).padStart(2,'0')}\`
+      const dateStr = `${curYear}-${String(curMonth+1).padStart(2,'0')}-${String(selectedDay).padStart(2,'0')}`
       const params = new URLSearchParams({
         role: 'cliente',
         prestataire_id: selectedPrestataire.id,
@@ -98,7 +98,7 @@ function ReserverContent() {
         rdv_heure: selectedHeure,
         rdv_prestation: selectedPrestation.id,
       })
-      router.push(\`/auth/register?\${params.toString()}\`)
+      router.push(`/auth/register?${params.toString()}`)
       return
     }
 
