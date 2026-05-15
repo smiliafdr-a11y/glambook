@@ -60,41 +60,62 @@ export default function ClientesPage() {
   async function addCliente() {
     if (!newCliente.prenom || !newCliente.nom) return
 
-    // Chercher si la cliente a déjà un compte Supabase par email OU téléphone
-    let userId: string | null = null
+    // Chercher si la cliente a DÉJÀ une fiche (créée lors de son inscription)
+    // par email OU téléphone — dans ce cas on met à jour sa fiche existante
+    let ficheExistante: any = null
 
     if (newCliente.email) {
-      const { data: parEmail } = await supabase
+      const { data } = await supabase
         .from('clientes')
-        .select('user_id')
+        .select('*')
         .eq('email', newCliente.email)
-        .not('user_id', 'is', null)
         .maybeSingle()
-      if (parEmail?.user_id) userId = parEmail.user_id
+      if (data) ficheExistante = data
     }
 
-    if (!userId && newCliente.telephone) {
-      const { data: parTel } = await supabase
+    if (!ficheExistante && newCliente.telephone) {
+      const { data } = await supabase
         .from('clientes')
-        .select('user_id')
+        .select('*')
         .eq('telephone', newCliente.telephone)
-        .not('user_id', 'is', null)
         .maybeSingle()
-      if (parTel?.user_id) userId = parTel.user_id
+      if (data) ficheExistante = data
     }
 
-    const { data } = await supabase.from('clientes').insert({
-      prestataire_id: prestataireId,
-      ...newCliente,
-      user_id: userId,
-      premiere_visite: new Date().toISOString().split('T')[0],
-    }).select().single()
+    let result: any = null
 
-    if (data) {
+    if (ficheExistante) {
+      // Fiche existante — on la lie à cette prestataire + on complète les infos
+      const { data } = await supabase
+        .from('clientes')
+        .update({
+          prestataire_id: prestataireId,
+          prenom: newCliente.prenom || ficheExistante.prenom,
+          nom: newCliente.nom || ficheExistante.nom,
+          email: newCliente.email || ficheExistante.email,
+          telephone: newCliente.telephone || ficheExistante.telephone,
+          allergies: newCliente.allergies || ficheExistante.allergies,
+          notes_privees: newCliente.notes_privees || ficheExistante.notes_privees,
+        })
+        .eq('id', ficheExistante.id)
+        .select()
+        .single()
+      result = data
+    } else {
+      // Nouvelle cliente sans compte — créer la fiche
+      const { data } = await supabase.from('clientes').insert({
+        prestataire_id: prestataireId,
+        ...newCliente,
+        premiere_visite: new Date().toISOString().split('T')[0],
+      }).select().single()
+      result = data
+    }
+
+    if (result) {
       loadClientes(prestataireId)
       setShowAddModal(false)
       setNewCliente({ prenom:'', nom:'', email:'', telephone:'', allergies:'', notes_privees:'' })
-      selectCliente(data)
+      selectCliente(result)
     }
   }
 
