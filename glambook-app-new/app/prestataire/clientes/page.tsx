@@ -59,17 +59,60 @@ export default function ClientesPage() {
 
   async function addCliente() {
     if (!newCliente.prenom || !newCliente.nom) return
+
+    // Chercher si la cliente a déjà un compte Supabase par email OU téléphone
+    let userId: string | null = null
+
+    if (newCliente.email) {
+      const { data: parEmail } = await supabase
+        .from('clientes')
+        .select('user_id')
+        .eq('email', newCliente.email)
+        .not('user_id', 'is', null)
+        .maybeSingle()
+      if (parEmail?.user_id) userId = parEmail.user_id
+    }
+
+    if (!userId && newCliente.telephone) {
+      const { data: parTel } = await supabase
+        .from('clientes')
+        .select('user_id')
+        .eq('telephone', newCliente.telephone)
+        .not('user_id', 'is', null)
+        .maybeSingle()
+      if (parTel?.user_id) userId = parTel.user_id
+    }
+
     const { data } = await supabase.from('clientes').insert({
       prestataire_id: prestataireId,
       ...newCliente,
+      user_id: userId,
       premiere_visite: new Date().toISOString().split('T')[0],
     }).select().single()
+
     if (data) {
       loadClientes(prestataireId)
       setShowAddModal(false)
       setNewCliente({ prenom:'', nom:'', email:'', telephone:'', allergies:'', notes_privees:'' })
       selectCliente(data)
     }
+  }
+
+  // Appelée quand on veut lier manuellement un compte existant à une fiche cliente
+  async function lierCompteCliente(clienteId: string, email: string) {
+    if (!email) return
+    const { data: existingCliente } = await supabase
+      .from('clientes')
+      .select('user_id')
+      .eq('email', email)
+      .not('user_id', 'is', null)
+      .maybeSingle()
+    if (existingCliente?.user_id) {
+      await supabase.from('clientes').update({ user_id: existingCliente.user_id }).eq('id', clienteId)
+      loadClientes(prestataireId)
+      return true
+    }
+    return false
   }
 
   const filtered = clientes.filter(c =>
