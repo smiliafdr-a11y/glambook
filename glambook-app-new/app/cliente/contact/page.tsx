@@ -26,13 +26,13 @@ export default function ContactPage() {
   async function init() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    const { data: cliente } = await supabase.from('clientes').select('*').eq('user_id', user.id).single()
-    if (!cliente) return
+    const { data: cliente } = await supabase.from('clientes').select('*').eq('user_id', user.id).maybeSingle()
+    if (!cliente || !cliente.prestataire_id) return
     setClienteId(cliente.id)
     setPrestataireId(cliente.prestataire_id)
-    const { data: pres } = await supabase.from('prestataires').select('*').eq('id', cliente.prestataire_id).single()
+    const { data: pres } = await supabase.from('prestataires').select('*').eq('id', cliente.prestataire_id).maybeSingle()
     setPrestataire(pres)
-    await loadMessages(cliente.id, cliente.prestataire_id)
+    if (pres) await loadMessages(cliente.id, cliente.prestataire_id)
 
     // Realtime subscription
     const channel = supabase.channel(`messages-${cliente.id}`)
