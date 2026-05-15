@@ -1,12 +1,13 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
 
-export default function ReserverPage() {
+function ReserverContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const today = new Date()
   const [prestations, setPrestations] = useState<any[]>([])
   const [selectedPrestataire, setSelectedPrestataire] = useState<any>(null)
@@ -30,18 +31,18 @@ export default function ReserverPage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/auth/login'); return }
     const { data: cliente } = await supabase.from('clientes').select('id,prestataire_id').eq('user_id', user.id).maybeSingle()
-    if (!cliente) return
-    setClienteId(cliente.id)
+    if (cliente) setClienteId(cliente.id)
 
-    // Récupérer prestataire_id depuis l'URL si dispo (venant du profil public)
-    const urlParams = new URLSearchParams(window.location.search)
-    const presIdFromUrl = urlParams.get('prestataire_id')
-    const presId = presIdFromUrl || cliente.prestataire_id
+    // Récupérer prestataire_id depuis l'URL EN PRIORITÉ (venant du profil public)
+    const presIdFromUrl = searchParams.get('prestataire_id')
+    const presId = presIdFromUrl || cliente?.prestataire_id
 
     // Si on vient du profil public, lier la prestataire à la cliente
-    if (presIdFromUrl && presIdFromUrl !== cliente.prestataire_id) {
+    if (presIdFromUrl && cliente && presIdFromUrl !== cliente.prestataire_id) {
       await supabase.from('clientes').update({ prestataire_id: presIdFromUrl }).eq('id', cliente.id)
     }
+
+    if (!presId) { return } // Pas de prestataire trouvée
 
     const { data: pres } = await supabase.from('prestataires').select('*').eq('id', presId).maybeSingle()
     setSelectedPrestataire(pres)
@@ -308,5 +309,13 @@ export default function ReserverPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function ReserverPage() {
+  return (
+    <Suspense fallback={<div style={{padding:40, textAlign:'center', color:'var(--text3)'}}>Chargement...</div>}>
+      <ReserverContent />
+    </Suspense>
   )
 }
