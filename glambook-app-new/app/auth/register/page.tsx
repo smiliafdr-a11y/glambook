@@ -97,7 +97,17 @@ function RegisterForm() {
         if (clienteError) { setError(clienteError.message); setLoading(false); return }
       }
 
-      router.push('/cliente/accueil')
+      // Si des params RDV sont dans l'URL, rediriger vers réservation pour finaliser
+      const rdvDate = searchParams.get('rdv_date')
+      const rdvHeure = searchParams.get('rdv_heure')
+      const rdvPrestation = searchParams.get('rdv_prestation')
+      const presId = prestataireIdFromUrl
+
+      if (rdvDate && rdvHeure && rdvPrestation && presId) {
+        router.push(`/cliente/reserver?prestataire_id=${presId}&rdv_date=${rdvDate}&rdv_heure=${rdvHeure}&rdv_prestation=${rdvPrestation}&auto=1`)
+      } else {
+        router.push('/cliente/accueil')
+      }
     }
   }
 
