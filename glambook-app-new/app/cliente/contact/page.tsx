@@ -90,11 +90,11 @@ export default function ContactPage() {
         </div>
         <div className="flex border rounded-xl overflow-hidden mt-3">
           <button onClick={() => setOnglet('chat')} className="flex-1 py-2 text-sm font-medium transition-colors"
-            style={{background: onglet==='chat' ? 'var(--accent)' : 'white', color: onglet==='chat' ? 'white' : '#9ca3af'}}>
+            style={{background: onglet==='chat' ? 'var(--accent)' : 'var(--card)', color: onglet==='chat' ? 'white' : 'var(--text3)'}}>
             💬 Chat
           </button>
           <button onClick={() => setOnglet('faq')} className="flex-1 py-2 text-sm font-medium transition-colors"
-            style={{background: onglet==='faq' ? 'var(--accent)' : 'white', color: onglet==='faq' ? 'white' : '#9ca3af'}}>
+            style={{background: onglet==='faq' ? 'var(--accent)' : 'var(--card)', color: onglet==='faq' ? 'white' : 'var(--text3)'}}>
             ❓ FAQ
           </button>
         </div>
