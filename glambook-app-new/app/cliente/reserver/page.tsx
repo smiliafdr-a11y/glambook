@@ -50,6 +50,25 @@ function ReserverContent() {
       const { data } = await supabase.from('prestations').select('*').eq('prestataire_id', pres.id).eq('actif', true).order('categorie')
       setPrestations(data || [])
       loadRdvsMois(pres.id, today.getFullYear(), today.getMonth())
+
+      // Restaurer le créneau depuis l'URL (après inscription)
+      const stepParam = searchParams.get('step')
+      const rdvDate = searchParams.get('rdv_date')
+      const rdvHeure = searchParams.get('rdv_heure')
+      const rdvPrestationId = searchParams.get('rdv_prestation')
+
+      if (stepParam === '3' && rdvDate && rdvHeure && rdvPrestationId && data) {
+        const prestation = data.find((p: any) => p.id === rdvPrestationId)
+        if (prestation) {
+          setSelectedPrestation(prestation)
+          const [y, m, d] = rdvDate.split('-').map(Number)
+          setCurYear(y)
+          setCurMonth(m - 1)
+          setSelectedDay(d)
+          setSelectedHeure(rdvHeure)
+          setStep(3)
+        }
+      }
     }
   }
 
