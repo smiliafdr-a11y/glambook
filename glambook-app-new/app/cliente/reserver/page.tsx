@@ -1,351 +1,193 @@
 'use client'
-import { useEffect, useState, Suspense } from 'react'
+import { useState, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre']
-
-function ReserverContent() {
+function RegisterForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const today = new Date()
-  const [prestations, setPrestations] = useState<any[]>([])
-  const [selectedPrestataire, setSelectedPrestataire] = useState<any>(null)
-  const [selectedPrestation, setSelectedPrestation] = useState<any>(null)
-  const [curYear, setCurYear] = useState(today.getFullYear())
-  const [curMonth, setCurMonth] = useState(today.getMonth())
-  const [selectedDay, setSelectedDay] = useState<number|null>(null)
-  const [selectedHeure, setSelectedHeure] = useState('')
-  const [modePaiement, setModePaiement] = useState<'acompte'|'especes'>('acompte')
-  const [step, setStep] = useState(1)
-  const [clienteId, setClienteId] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [rdvsExistants, setRdvsExistants] = useState<any[]>([])
-  const [confirmed, setConfirmed] = useState(false)
+  const defaultRole = searchParams.get('role') || 'prestataire'
+  const prestataireIdFromUrl = searchParams.get('prestataire_id') || null
+  const [role, setRole] = useState(defaultRole as 'prestataire' | 'cliente')
+  const [form, setForm] = useState({ prenom: '', nom: '', email: '', telephone: '', password: '' })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const CRENEAUX = ['9h00','9h30','10h00','10h30','11h00','11h30','14h00','14h30','15h00','15h30','16h00','16h30','17h00','17h30']
-
-  useEffect(() => { init() }, [])
-
-  async function init() {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/auth/login'); return }
-    const { data: cliente } = await supabase.from('clientes').select('id,prestataire_id').eq('user_id', user.id).maybeSingle()
-    if (cliente) setClienteId(cliente.id)
-
-    // Récupérer prestataire_id depuis l'URL EN PRIORITÉ (venant du profil public)
-    const presIdFromUrl = searchParams.get('prestataire_id')
-    const presId = presIdFromUrl || cliente?.prestataire_id
-
-    // Si on vient du profil public, lier la prestataire à la cliente
-    if (presIdFromUrl && cliente && presIdFromUrl !== cliente.prestataire_id) {
-      await supabase.from('clientes').update({ prestataire_id: presIdFromUrl }).eq('id', cliente.id)
-    }
-
-    if (!presId) { return } // Pas de prestataire trouvée
-
-    const { data: pres } = await supabase.from('prestataires').select('*').eq('id', presId).maybeSingle()
-    setSelectedPrestataire(pres)
-    if (pres) {
-      const { data } = await supabase.from('prestations').select('*').eq('prestataire_id', pres.id).eq('actif', true).order('categorie')
-      setPrestations(data || [])
-      loadRdvsMois(pres.id, today.getFullYear(), today.getMonth())
-    }
+  function update(field: string, value: string) {
+    setForm(prev => ({ ...prev, [field]: value }))
   }
 
-  async function loadRdvsMois(presId: string, y: number, m: number) {
-    const start = `${y}-${String(m+1).padStart(2,'0')}-01`
-    const end = `${y}-${String(m+1).padStart(2,'0')}-${new Date(y,m+1,0).getDate()}`
-    const { data } = await supabase.from('rendez_vous').select('date_rdv,heure_debut,heure_fin').eq('prestataire_id', presId).gte('date_rdv', start).lte('date_rdv', end).neq('statut','annule')
-    setRdvsExistants(data || [])
-  }
+  async function handleRegister(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
 
-  function changeMonth(dir: number) {
-    let m = curMonth + dir, y = curYear
-    if (m > 11) { m = 0; y++ }
-    if (m < 0) { m = 11; y-- }
-    setCurMonth(m); setCurYear(y)
-    if (selectedPrestataire) loadRdvsMois(selectedPrestataire.id, y, m)
-  }
-
-  function creneauxDispo(d: number) {
-    const key = `${curYear}-${String(curMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
-    const rdvsJour = rdvsExistants.filter(r => r.date_rdv === key)
-    return CRENEAUX.filter(h => {
-      const [hh, mm] = h.replace('h',':').split(':').map(Number)
-      const heureMin = hh * 60 + (mm || 0)
-      return !rdvsJour.some(r => {
-        const [rh, rm] = r.heure_debut.split(':').map(Number)
-        const rdvMin = rh * 60 + (rm || 0)
-        const dur = selectedPrestation?.duree_minutes || 60
-        return Math.abs(rdvMin - heureMin) < dur
-      })
+    const { data, error: authError } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
     })
-  }
 
-  async function confirmerRdv() {
-    if (!selectedDay || !selectedHeure || !selectedPrestation || !selectedPrestataire) return
-    setSaving(true)
+    if (authError || !data.user) {
+      setError(authError?.message || 'Erreur.')
+      setLoading(false)
+      return
+    }
 
-    // Si pas de clienteId (fiche pas encore créée), créer la fiche cliente
-    let cId = clienteId
-    if (!cId) {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        // Chercher si une fiche existe
-        const { data: ficheExist } = await supabase.from('clientes').select('id').eq('user_id', user.id).maybeSingle()
-        if (ficheExist) {
-          cId = ficheExist.id
-          // Lier la prestataire
-          await supabase.from('clientes').update({ prestataire_id: selectedPrestataire.id }).eq('id', ficheExist.id)
-        } else {
-          // Créer la fiche à la volée
-          const { data: newC } = await supabase.from('clientes').insert({
-            user_id: user.id,
-            prestataire_id: selectedPrestataire.id,
-            prenom: user.email?.split('@')[0] || 'Cliente',
-            nom: '',
-            email: user.email,
-            premiere_visite: new Date().toISOString().split('T')[0],
-          }).select().single()
-          cId = newC?.id || ''
-        }
-        setClienteId(cId)
+    if (role === 'prestataire') {
+      const { error: presError } = await supabase.from('prestataires').insert({
+        user_id: data.user.id,
+        nom: form.nom,
+        prenom: form.prenom,
+        email: form.email,
+        plan: 'starter',
+      })
+      if (presError) { setError(presError.message); setLoading(false); return }
+      router.push('/prestataire/dashboard')
+    } else {
+      // Cliente — chercher si une fiche existe déjà par email OU téléphone (créée par prestataire)
+      let ficheExistante: any = null
+
+      if (form.email) {
+        const { data: parEmail } = await supabase
+          .from('clientes')
+          .select('id, prestataire_id')
+          .eq('email', form.email)
+          .is('user_id', null)
+          .maybeSingle()
+        if (parEmail) ficheExistante = parEmail
+      }
+
+      if (!ficheExistante && form.telephone) {
+        const telClean = form.telephone.replace(/\s/g, '')
+        const { data: parTel } = await supabase
+          .from('clientes')
+          .select('id, prestataire_id')
+          .eq('telephone', telClean)
+          .is('user_id', null)
+          .maybeSingle()
+        if (parTel) ficheExistante = parTel
+      }
+
+      if (ficheExistante) {
+        // Lier le compte à la fiche existante — la cliente verra ses RDV automatiquement
+        await supabase.from('clientes')
+          .update({
+            user_id: data.user.id,
+            prenom: form.prenom,
+            nom: form.nom,
+            email: form.email,
+            telephone: form.telephone.replace(/\s/g, '') || undefined,
+            ...(prestataireIdFromUrl ? { prestataire_id: prestataireIdFromUrl } : {}),
+          })
+          .eq('id', ficheExistante.id)
+      } else {
+        // Nouvelle cliente — créer sa fiche
+        let presId = prestataireIdFromUrl
+        if (!presId) { const { data: pres } = await supabase.from('prestataires').select('id').limit(1).single(); presId = pres?.id || null }
+        const { error: clienteError } = await supabase.from('clientes').insert({
+          user_id: data.user.id,
+          nom: form.nom,
+          prenom: form.prenom,
+          email: form.email,
+          telephone: form.telephone.replace(/\s/g, '') || null,
+          prestataire_id: presId,
+          premiere_visite: new Date().toISOString().split('T')[0],
+        })
+        if (clienteError) { setError(clienteError.message); setLoading(false); return }
+      }
+
+      // Si des params RDV sont dans l'URL, rediriger vers réservation pour finaliser
+      const rdvDate = searchParams.get('rdv_date')
+      const rdvHeure = searchParams.get('rdv_heure')
+      const rdvPrestation = searchParams.get('rdv_prestation')
+      const presId = prestataireIdFromUrl
+
+      if (rdvDate && rdvHeure && rdvPrestation && presId) {
+        router.push(`/cliente/reserver?prestataire_id=${presId}&rdv_date=${rdvDate}&rdv_heure=${rdvHeure}&rdv_prestation=${rdvPrestation}&auto=1`)
+      } else {
+        router.push('/cliente/accueil')
       }
     }
-
-    if (!cId) { setSaving(false); return }
-
-    const dateStr = `${curYear}-${String(curMonth+1).padStart(2,'0')}-${String(selectedDay).padStart(2,'0')}`
-    const [h, min] = selectedHeure.replace('h',':').split(':').map(Number)
-    const totalMin = h*60 + (min||0) + selectedPrestation.duree_minutes
-    const hFin = `${String(Math.floor(totalMin/60)).padStart(2,'0')}:${String(totalMin%60).padStart(2,'0')}`
-
-    await supabase.from('rendez_vous').insert({
-      prestataire_id: selectedPrestataire.id,
-      cliente_id: cId,
-      prestation_id: selectedPrestation.id,
-      date_rdv: dateStr,
-      heure_debut: selectedHeure.replace('h',':').padEnd(5,'0'),
-      heure_fin: hFin,
-      statut: 'confirme',
-      prix_total: selectedPrestation.prix,
-      acompte_montant: modePaiement === 'especes' ? 0 : selectedPrestation.acompte,
-      acompte_paye: false,
-      notes: modePaiement === 'especes' ? 'Paiement intégral en espèces le jour J' : '',
-    })
-    setSaving(false)
-    setConfirmed(true)
   }
 
-  // CONFIRMATION
-  if (confirmed) return (
-    <div className="p-4 flex flex-col items-center justify-center min-h-96 text-center">
-      <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-3xl mb-4" style={{background:'var(--accent)'}}>✓</div>
-      <h2 className="text-xl font-bold mb-2">RDV confirmé !</h2>
-      <p className="text-sm mb-1">{selectedPrestation?.nom}</p>
-      <p className="text-sm mb-4">{selectedDay} {MONTHS[curMonth]} — {selectedHeure}</p>
-      {modePaiement === 'especes' ? (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 mb-4 text-sm text-yellow-700">
-          💵 Paiement de <strong>{selectedPrestation?.prix} €</strong> en espèces le jour J
-        </div>
-      ) : (
-        <div className="rounded-xl p-3 mb-4 text-sm" style={{background:'var(--accent-bg)',color:'var(--accent-d)'}}>
-          💳 Acompte de <strong>{selectedPrestation?.acompte} €</strong> à régler avant le RDV
-        </div>
-      )}
-      <p className="text-xs mb-1">Rappel SMS envoyé 24h avant</p>
-      <button onClick={() => router.push('/cliente/accueil')} className="mt-4 px-6 py-3 rounded-xl text-white font-medium" style={{background:'var(--accent)'}}>
-        Retour à l'accueil
-      </button>
-    </div>
-  )
-
-  const firstDay = new Date(curYear, curMonth, 1).getDay()
-  const daysInMonth = new Date(curYear, curMonth+1, 0).getDate()
-  const startOffset = firstDay === 0 ? 6 : firstDay - 1
-
   return (
-    <div className="p-4 max-w-2xl mx-auto">
-      <h1 className="text-xl font-bold mb-4">Réserver une prestation</h1>
-
-      {/* STEP INDICATOR */}
-      <div className="flex items-center gap-2 mb-6">
-        {['Prestation','Date & heure','Confirmation'].map((s,i) => (
-          <div key={i} className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                style={{background: step > i+1 ? 'var(--accent)' : step === i+1 ? 'var(--accent)' : '#e5e7eb', color: step >= i+1 ? 'white' : '#9ca3af'}}>
-                {step > i+1 ? '✓' : i+1}
-              </div>
-              <span className="text-xs font-medium" style={{color: step === i+1 ? 'var(--accent)' : '#9ca3af'}}>{s}</span>
-            </div>
-            {i < 2 && <div className="flex-1 h-px bg-gray-200"/>}
-          </div>
-        ))}
+    <div style={{background:'var(--card)'}}>
+      <div className="flex border rounded-xl overflow-hidden mb-6">
+        <button onClick={() => setRole('prestataire')} className="flex-1 py-2.5 text-sm font-medium"
+          style={role === 'prestataire' ? {backgroundColor:'var(--accent)', color:'white'} : {color:'#9ca3af'}}>
+          💅 Prestataire
+        </button>
+        <button onClick={() => setRole('cliente')} className="flex-1 py-2.5 text-sm font-medium"
+          style={role === 'cliente' ? {backgroundColor:'var(--accent)', color:'white'} : {color:'#9ca3af'}}>
+          👤 Cliente
+        </button>
       </div>
 
-      {/* ÉTAPE 1 */}
-      {step === 1 && (
-        <div style={{display:'flex', flexDirection:'column', gap:10}}>
-          {prestations.map(p => (
-            <button key={p.id} onClick={() => { setSelectedPrestation(p); setStep(2) }}
-              style={{
-                width:'100%', textAlign:'left', background:'var(--card)',
-                border:'1px solid var(--border)', borderRadius:14,
-                padding:'16px 18px', cursor:'pointer',
-                boxShadow:'var(--shadow)'
-              }}>
-              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                <div>
-                  <div style={{fontWeight:600, fontSize:14, color:'var(--text)', marginBottom:4}}>{p.nom}</div>
-                  <div style={{fontSize:12, color:'var(--text3)'}}>
-                    ⏱ {p.duree_minutes < 60 ? `${p.duree_minutes}min` : `${Math.floor(p.duree_minutes/60)}h${p.duree_minutes%60 ? p.duree_minutes%60+'min':''}`}
-                  </div>
-                  {p.description && <div style={{fontSize:12, color:'var(--text2)', marginTop:4}}>{p.description}</div>}
-                </div>
-                <div style={{textAlign:'right', marginLeft:16, flexShrink:0}}>
-                  <div style={{fontWeight:700, fontSize:18, color:'var(--accent)'}}>{p.prix} €</div>
-                  {p.acompte > 0 && <div style={{fontSize:11, color:'var(--text3)', marginTop:2}}>Acompte {p.acompte} €</div>}
-                </div>
-              </div>
-            </button>
-          ))}
-          {prestations.length === 0 && <div style={{textAlign:'center', padding:'40px 0', color:'var(--text3)', fontSize:13}}>Aucune prestation disponible</div>}
-        </div>
-      )}
+      {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 mb-4">{error}</div>}
 
-      {/* ÉTAPE 2 */}
-      {step === 2 && (
+      <form onSubmit={handleRegister} className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
+            <input type="text" value={form.prenom} onChange={e => update('prenom', e.target.value)}
+              className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none"
+              placeholder="Nadia" required />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+            <input type="text" value={form.nom} onChange={e => update('nom', e.target.value)}
+              className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none"
+              placeholder="Soltani" required />
+          </div>
+        </div>
         <div>
-          <button onClick={() => setStep(1)} className="text-sm mb-4 flex items-center gap-1" style={{color:'var(--accent)'}}>← Changer de prestation</button>
-          <div style={{background:'var(--card)', border:'1px solid var(--border)', borderRadius:14, padding:'16px', marginBottom:12}}>
-            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12}}>
-              <button onClick={() => changeMonth(-1)} className="w-8 h-8 border rounded-lg flex items-center justify-center">‹</button>
-              <div className="font-semibold">{MONTHS[curMonth]} {curYear}</div>
-              <button onClick={() => changeMonth(1)} className="w-8 h-8 border rounded-lg flex items-center justify-center">›</button>
-            </div>
-            <div className="grid grid-cols-7 gap-1 mb-1">
-              {['L','M','M','J','V','S','D'].map((d,i) => <div key={i} className="text-center text-xs py-1">{d}</div>)}
-            </div>
-            <div className="grid grid-cols-7 gap-1">
-              {Array.from({length: startOffset}).map((_,i) => <div key={`e${i}`}/>)}
-              {Array.from({length: daysInMonth}).map((_,i) => {
-                const d = i+1
-                const isPast = new Date(curYear,curMonth,d) < new Date(today.getFullYear(),today.getMonth(),today.getDate())
-                const isSun = new Date(curYear,curMonth,d).getDay() === 0
-                const isSelected = selectedDay === d
-                const dispo = !isPast && !isSun && creneauxDispo(d).length > 0
-                return (
-                  <button key={d} onClick={() => { if(dispo){setSelectedDay(d);setSelectedHeure('')}}}
-                    disabled={!dispo}
-                    className="aspect-square rounded-lg text-xs font-medium flex items-center justify-center"
-                    style={{
-                      background: isSelected ? 'var(--accent)' : dispo ? 'var(--accent-bg)' : 'transparent',
-                      color: isSelected ? '#fff' : !dispo ? '#ddd' : '#111',
-                      border: isSelected ? '2px solid var(--accent)' : dispo ? '1px solid var(--accent-mid)' : '1px solid transparent',
-                    }}>
-                    {d}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {selectedDay && (
-            <div style={{background:'var(--card)', border:'1px solid var(--border)', borderRadius:14, padding:'16px', marginBottom:12}}>
-              <div style={{fontSize:13, fontWeight:600, color:'var(--text2)', marginBottom:12}}>Créneaux disponibles</div>
-              <div className="grid grid-cols-4 gap-2">
-                {creneauxDispo(selectedDay).map(h => (
-                  <button key={h} onClick={() => setSelectedHeure(h)}
-                    className="py-2 rounded-lg text-sm font-medium"
-                    style={{background: selectedHeure===h ? 'var(--accent)' : 'var(--accent-bg)', color: selectedHeure===h ? '#fff' : 'var(--accent)', border: `1px solid ${selectedHeure===h ? 'var(--accent)' : 'var(--accent-mid)'}`}}>
-                    {h}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {selectedDay && selectedHeure && (
-            <button onClick={() => setStep(3)} className="w-full py-3 rounded-xl text-white font-semibold" style={{background:'var(--accent)'}}>
-              Continuer →
-            </button>
-          )}
+          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input type="email" value={form.email} onChange={e => update('email', e.target.value)}
+            className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none"
+            placeholder="nadia@glambook.fr" required />
         </div>
-      )}
-
-      {/* ÉTAPE 3 — RECAP + MODE PAIEMENT */}
-      {step === 3 && (
+        {role === 'cliente' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+            <input type="tel" value={form.telephone} onChange={e => update('telephone', e.target.value)}
+              style={{width:'100%', border:'1.5px solid var(--border)', borderRadius:10, padding:'10px 14px', fontSize:13, outline:'none', background:'var(--bg2)', color:'var(--text)'}}
+              placeholder="06 XX XX XX XX" />
+          </div>
+        )}
         <div>
-          <button onClick={() => setStep(2)} className="text-sm mb-4 flex items-center gap-1" style={{color:'var(--accent)'}}>← Modifier le créneau</button>
-
-          <div style={{background:'var(--card)', border:'1px solid var(--border)', borderRadius:14, padding:'16px 18px', marginBottom:12}}>
-            <div style={{fontSize:11, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'0.08em', marginBottom:12}}>Récapitulatif</div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm"><span className="text-theme2">Prestation</span><span className="font-medium">{selectedPrestation?.nom}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-theme2">Date</span><span className="font-medium">{selectedDay} {MONTHS[curMonth]} {curYear}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-theme2">Heure</span><span className="font-medium">{selectedHeure}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-theme2">Durée</span><span className="font-medium">{selectedPrestation?.duree_minutes}min</span></div>
-              <div className="border-t pt-2 flex justify-between font-bold">
-                <span>Total</span><span style={{color:'var(--accent)'}}>{selectedPrestation?.prix} €</span>
-              </div>
-            </div>
-          </div>
-
-          {/* MODE DE PAIEMENT */}
-          <div style={{background:'var(--card)', border:'1px solid var(--border)', borderRadius:14, padding:'16px 18px', marginBottom:12}}>
-            <div style={{fontSize:13, fontWeight:600, color:'var(--text)', marginBottom:12}}>Mode de paiement</div>
-            <div className="space-y-2">
-              {selectedPrestation?.acompte > 0 && (
-                <button onClick={() => setModePaiement('acompte')}
-                  className="w-full p-3 rounded-xl border-2 text-left transition-all"
-                  style={{borderColor: modePaiement==='acompte' ? 'var(--accent)' : '#e5e7eb', background: modePaiement==='acompte' ? 'var(--accent-bg)' : 'white'}}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center"
-                      style={{borderColor:'var(--accent)', background: modePaiement==='acompte' ? 'var(--accent)' : 'white'}}>
-                      {modePaiement==='acompte' && <div style={{background:'var(--card)'}}/>}
-                    </div>
-                    <div>
-                      <div className="font-medium text-sm">💳 Acompte en ligne — {selectedPrestation.acompte} €</div>
-                      <div className="text-xs">Sécurisez votre créneau maintenant, solde le jour J</div>
-                    </div>
-                  </div>
-                </button>
-              )}
-              <button onClick={() => setModePaiement('especes')}
-                className="w-full p-3 rounded-xl border-2 text-left transition-all"
-                style={{borderColor: modePaiement==='especes' ? 'var(--accent)' : '#e5e7eb', background: modePaiement==='especes' ? 'var(--accent-bg)' : 'white'}}>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center"
-                    style={{borderColor:'var(--accent)', background: modePaiement==='especes' ? 'var(--accent)' : 'white'}}>
-                    {modePaiement==='especes' && <div style={{background:'var(--card)'}}/>}
-                  </div>
-                  <div>
-                    <div className="font-medium text-sm">💵 Paiement en espèces le jour J</div>
-                    <div className="text-xs">Payez le montant total ({selectedPrestation?.prix} €) à votre prestataire</div>
-                  </div>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          <button onClick={confirmerRdv} disabled={saving}
-            className="w-full py-3 rounded-xl text-white font-semibold mb-3 disabled:opacity-40"
-            style={{background:'var(--accent)'}}>
-            {saving ? 'Confirmation...' : modePaiement === 'especes' ? 'Confirmer le RDV — paiement sur place' : `Confirmer et payer l'acompte — ${selectedPrestation?.acompte} €`}
-          </button>
-          <div className="text-xs text-center">Annulation gratuite jusqu'à 24h avant le RDV</div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+          <input type="password" value={form.password} onChange={e => update('password', e.target.value)}
+            className="w-full border rounded-lg px-3 py-2.5 text-sm outline-none"
+            placeholder="8 caractères minimum" required minLength={8} />
         </div>
-      )}
+        <button type="submit" disabled={loading}
+          className="w-full text-white rounded-lg py-3 font-semibold text-sm disabled:opacity-50"
+          style={{backgroundColor:'var(--accent)'}}>
+          {loading ? 'Création...' : 'Créer mon compte gratuitement'}
+        </button>
+      </form>
+
+      <div className="mt-4 text-center text-sm">
+        Déjà un compte ?{' '}
+        <Link href="/auth/login" className="font-medium hover:underline" style={{color:'var(--accent)'}}>Se connecter</Link>
+      </div>
     </div>
   )
 }
 
-export default function ReserverPage() {
+export default function RegisterPage() {
   return (
-    <Suspense fallback={<div style={{padding:40, textAlign:'center', color:'var(--text3)'}}>Chargement...</div>}>
-      <ReserverContent />
-    </Suspense>
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <Link href="/" className="text-2xl font-bold" style={{color:'var(--accent)'}}>GlamBook</Link>
+          <p className="text-theme2 mt-2 text-sm">Créez votre compte en 1 minute</p>
+        </div>
+        <Suspense fallback={<div style={{background:'var(--card)'}}>Chargement...</div>}>
+          <RegisterForm />
+        </Suspense>
+      </div>
+    </div>
   )
 }
