@@ -6,6 +6,7 @@ import Link from 'next/link'
 export default function AccueilCliente() {
   const [prenom, setPrenom] = useState('')
   const [prochainsRdv, setProchainsRdv] = useState<any[]>([])
+  const [prestataireLie, setPrestataireLie] = useState(true)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => { init() }, [])
@@ -16,6 +17,7 @@ export default function AccueilCliente() {
     const { data: cliente } = await supabase.from('clientes').select('*').eq('user_id', user.id).single()
     if (cliente) {
       setPrenom(cliente.prenom)
+      setPrestataireLie(!!cliente.prestataire_id)
       const today = new Date().toISOString().split('T')[0]
       const { data: rdvs } = await supabase
         .from('rendez_vous')
@@ -46,6 +48,16 @@ export default function AccueilCliente() {
 
   return (
     <div className="anim-up p-4">
+      {/* ALERTE — pas de prestataire liée */}
+      {!prestataireLie && (
+        <a href="/cliente/choisir-prestataire" style={{
+          display:'block', background:'var(--accent)', borderRadius:14, padding:'14px 18px',
+          marginBottom:16, textDecoration:'none', color:'#fff'
+        }}>
+          <div style={{fontWeight:700, fontSize:13, marginBottom:3}}>⚠️ Choisissez votre prestataire</div>
+          <div style={{fontSize:12, opacity:0.85}}>Pour réserver et envoyer des messages, sélectionnez votre prestataire beauté →</div>
+        </a>
+      )}
       {/* HERO */}
       <div style={{ background: 'linear-gradient(135deg, #C24567 0%, #7E2440 100%)', borderRadius: 20, padding: '22px 20px', marginBottom: 18, position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', right: -24, top: -24, width: 130, height: 130, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
