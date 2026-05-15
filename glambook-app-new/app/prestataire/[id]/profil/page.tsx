@@ -1,4 +1,3 @@
-
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -27,22 +26,22 @@ export default function ProfilPrestatairePage() {
 
   async function prendreRdv() {
     if (!user) {
-      // Sauvegarder la destination et rediriger vers inscription
       router.push(`/auth/register?role=cliente&prestataire_id=${id}`)
       return
     }
-    // Cliente connectée — lier à cette prestataire si pas déjà fait
+    // Cliente connectée — lier à cette prestataire
     const { data: cliente } = await supabase.from('clientes').select('id, prestataire_id').eq('user_id', user.id).maybeSingle()
-    if (cliente && !cliente.prestataire_id) {
+    if (cliente) {
       await supabase.from('clientes').update({ prestataire_id: id }).eq('id', cliente.id)
     }
-    router.push('/cliente/reserver')
+    // Passer l'id en URL pour que reserver puisse l'utiliser directement
+    router.push(`/cliente/reserver?prestataire_id=${id}`)
   }
 
   async function envoyerMessage() {
     if (!user) { router.push(`/auth/register?role=cliente&prestataire_id=${id}`); return }
     const { data: cliente } = await supabase.from('clientes').select('id, prestataire_id').eq('user_id', user.id).maybeSingle()
-    if (cliente && !cliente.prestataire_id) {
+    if (cliente) {
       await supabase.from('clientes').update({ prestataire_id: id }).eq('id', cliente.id)
     }
     router.push('/cliente/contact')
