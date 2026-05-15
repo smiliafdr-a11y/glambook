@@ -8,6 +8,7 @@ function RegisterForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const defaultRole = searchParams.get('role') || 'prestataire'
+  const prestataireIdFromUrl = searchParams.get('prestataire_id') || null
   const [role, setRole] = useState(defaultRole as 'prestataire' | 'cliente')
   const [form, setForm] = useState({ prenom: '', nom: '', email: '', telephone: '', password: '' })
   const [loading, setLoading] = useState(false)
@@ -77,18 +78,20 @@ function RegisterForm() {
             nom: form.nom,
             email: form.email,
             telephone: form.telephone.replace(/\s/g, '') || undefined,
+            ...(prestataireIdFromUrl ? { prestataire_id: prestataireIdFromUrl } : {}),
           })
           .eq('id', ficheExistante.id)
       } else {
         // Nouvelle cliente — créer sa fiche
-        const { data: pres } = await supabase.from('prestataires').select('id').limit(1).single()
+        let presId = prestataireIdFromUrl
+        if (!presId) { const { data: pres } = await supabase.from('prestataires').select('id').limit(1).single(); presId = pres?.id || null }
         const { error: clienteError } = await supabase.from('clientes').insert({
           user_id: data.user.id,
           nom: form.nom,
           prenom: form.prenom,
           email: form.email,
           telephone: form.telephone.replace(/\s/g, '') || null,
-          prestataire_id: pres?.id || null,
+          prestataire_id: presId,
           premiere_visite: new Date().toISOString().split('T')[0],
         })
         if (clienteError) { setError(clienteError.message); setLoading(false); return }
