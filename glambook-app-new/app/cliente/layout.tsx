@@ -51,6 +51,7 @@ export default function ClienteLayout({ children }: { children: React.ReactNode 
           <button onClick={toggle} style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--bg2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text2)', fontSize: 13 }}>
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
+          <a href="/cliente/choisir-prestataire" style={{ fontSize: 11, color: 'var(--text3)', textDecoration: 'none', padding: '4px 8px' }}>Ma presta.</a>
           <button onClick={handleLogout} style={{ fontSize: 11, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}>Déco.</button>
         </div>
       </div>
