@@ -66,10 +66,10 @@ export default function ListeAttentePage() {
       </div>
 
       {liste.length === 0 ? (
-        <div style={{background:'var(--card)'}}>
-          <div className="text-4xl mb-3">🎉</div>
-          <h3 style={{fontWeight:600, marginBottom:4, color:'var(--text)'}}>Liste d'attente vide</h3>
-          <p className="text-sm">Aucune cliente n'attend de créneau en ce moment.</p>
+        <div style={{background:'var(--card)', border:'1px solid var(--border)', borderRadius:14, padding:'32px 28px', display:'flex', flexDirection:'column', alignItems:'flex-start', gap:8}}>
+          <div style={{fontSize:32}}>🎉</div>
+          <h3 style={{fontWeight:600, fontSize:15, color:'var(--text)', margin:0}}>Liste d'attente vide</h3>
+          <p style={{fontSize:13, color:'var(--text3)', margin:0}}>Aucune cliente n'attend de créneau en ce moment.</p>
         </div>
       ) : (
         <div className="space-y-3">
