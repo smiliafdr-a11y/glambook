@@ -242,7 +242,7 @@ export default function AgendaPage() {
       </div>
 
       {/* PANNEAU DÉTAIL */}
-      <div style={{background:'var(--card)'}}>
+      <div style={{background:'var(--card)', width:320, minWidth:320, borderLeft:'1px solid var(--border)', display:'flex', flexDirection:'column', height:'100%', overflow:'hidden'}}>
         <div className="p-4 border-b">
           <div className="font-semibold capitalize text-sm">{selectedDateLabel}</div>
           <div className="text-xs mt-0.5">{rdvsJour.length} RDV · {caJour} € prévus</div>
@@ -300,7 +300,7 @@ export default function AgendaPage() {
       {showModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
           onClick={e => { if(e.target === e.currentTarget) setShowModal(false) }}>
-          <div style={{background:'var(--card)'}}>
+          <div style={{background:'var(--card)', borderRadius:20, width:480, maxWidth:'95vw', maxHeight:'90vh', overflowY:'auto'}}>
             <div className="px-5 py-4 flex items-center justify-between" style={{background:'var(--accent)'}}>
               <h3 className="text-white font-semibold">Nouveau rendez-vous</h3>
               <button onClick={() => setShowModal(false)} className="text-white/80 hover:text-white text-xl">✕</button>
@@ -314,12 +314,12 @@ export default function AgendaPage() {
                 <div className="flex border rounded-xl overflow-hidden mb-3">
                   <button onClick={() => setModeCliente('existante')}
                     className="flex-1 py-2 text-xs font-medium transition-colors"
-                    style={{background: modeCliente==='existante' ? 'var(--accent)' : 'white', color: modeCliente==='existante' ? 'white' : '#9ca3af'}}>
+                    style={{background: modeCliente==='existante' ? 'var(--accent)' : 'var(--bg2)', color: modeCliente==='existante' ? 'white' : 'var(--text3)'}}>
                     📋 Cliente existante
                   </button>
                   <button onClick={() => setModeCliente('rapide')}
                     className="flex-1 py-2 text-xs font-medium transition-colors"
-                    style={{background: modeCliente==='rapide' ? 'var(--accent)' : 'white', color: modeCliente==='rapide' ? 'white' : '#9ca3af'}}>
+                    style={{background: modeCliente==='rapide' ? 'var(--accent)' : 'var(--bg2)', color: modeCliente==='rapide' ? 'white' : 'var(--text3)'}}>
                     ⚡ Ajout rapide
                   </button>
                 </div>
@@ -336,7 +336,7 @@ export default function AgendaPage() {
                       className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-pink-300"
                       placeholder="Prénom *" />
                     <input type="tel" value={formRdv.telephone} onChange={e => setFormRdv(f=>({...f,telephone:e.target.value}))}
-                      className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-pink-300"
+                      style={{width:'100%', border:'1.5px solid var(--border)', borderRadius:10, padding:'10px 14px', fontSize:13, outline:'none', background:'var(--bg2)', color:'var(--text)'}}
                       placeholder="Téléphone (optionnel)" />
                   </div>
                 )}
@@ -345,7 +345,7 @@ export default function AgendaPage() {
               <div>
                 <label className="block text-xs font-semibold mb-1">Prestation</label>
                 <select value={formRdv.prestation_id} onChange={e => setFormRdv(f=>({...f,prestation_id:e.target.value}))}
-                  className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-pink-300">
+                  style={{width:'100%', border:'1.5px solid var(--border)', borderRadius:10, padding:'10px 14px', fontSize:13, outline:'none', background:'var(--bg2)', color:'var(--text)'}}>
                   <option value="">Choisir une prestation...</option>
                   {prestations.map(p => <option key={p.id} value={p.id}>{p.nom} — {p.prix} € ({p.duree_minutes}min)</option>)}
                 </select>
@@ -361,7 +361,7 @@ export default function AgendaPage() {
                 <div>
                   <label className="block text-xs font-semibold mb-1">Heure</label>
                   <input type="time" value={formRdv.heure} onChange={e => setFormRdv(f=>({...f,heure:e.target.value}))}
-                    className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:border-pink-300" />
+                    style={{width:'100%', border:'1.5px solid var(--border)', borderRadius:10, padding:'10px 14px', fontSize:13, outline:'none', background:'var(--bg2)', color:'var(--text)'}} />
                 </div>
               </div>
 
@@ -369,12 +369,12 @@ export default function AgendaPage() {
                 <label className="block text-xs font-semibold mb-1">Note interne</label>
                 <textarea value={formRdv.notes} onChange={e => setFormRdv(f=>({...f,notes:e.target.value}))}
                   rows={2} placeholder="Allergies, préférences, remarques..."
-                  className="w-full border rounded-lg px-3 py-2 text-sm outline-none resize-none focus:border-pink-300" />
+                  style={{width:'100%', border:'1.5px solid var(--border)', borderRadius:10, padding:'10px 14px', fontSize:13, outline:'none', background:'var(--bg2)', color:'var(--text)', resize:'none'}} />
               </div>
             </div>
 
             <div className="px-5 pb-5 flex gap-3">
-              <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 border text-gray-600 rounded-lg text-sm">Annuler</button>
+              <button onClick={() => setShowModal(false)} style={{flex:1, padding:'10px', border:'1.5px solid var(--border)', borderRadius:11, fontSize:13, background:'var(--bg2)', color:'var(--text2)', cursor:'pointer'}}>Annuler</button>
               <button onClick={saveRdv} disabled={saving || !canSave}
                 className="flex-1 py-2.5 text-white rounded-lg text-sm font-medium disabled:opacity-40"
                 style={{background:'var(--accent)'}}>
