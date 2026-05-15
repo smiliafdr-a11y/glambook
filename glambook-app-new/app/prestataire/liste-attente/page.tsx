@@ -68,7 +68,7 @@ export default function ListeAttentePage() {
       {liste.length === 0 ? (
         <div style={{background:'var(--card)'}}>
           <div className="text-4xl mb-3">🎉</div>
-          <h3 className="font-semibold mb-1">Liste d'attente vide</h3>
+          <h3 style={{fontWeight:600, marginBottom:4, color:'var(--text)'}}>Liste d'attente vide</h3>
           <p className="text-sm">Aucune cliente n'attend de créneau en ce moment.</p>
         </div>
       ) : (
