@@ -84,8 +84,38 @@ function ReserverContent() {
   }
 
   async function confirmerRdv() {
-    if (!selectedDay || !selectedHeure || !selectedPrestation || !clienteId) return
+    if (!selectedDay || !selectedHeure || !selectedPrestation || !selectedPrestataire) return
     setSaving(true)
+
+    // Si pas de clienteId (fiche pas encore créée), créer la fiche cliente
+    let cId = clienteId
+    if (!cId) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        // Chercher si une fiche existe
+        const { data: ficheExist } = await supabase.from('clientes').select('id').eq('user_id', user.id).maybeSingle()
+        if (ficheExist) {
+          cId = ficheExist.id
+          // Lier la prestataire
+          await supabase.from('clientes').update({ prestataire_id: selectedPrestataire.id }).eq('id', ficheExist.id)
+        } else {
+          // Créer la fiche à la volée
+          const { data: newC } = await supabase.from('clientes').insert({
+            user_id: user.id,
+            prestataire_id: selectedPrestataire.id,
+            prenom: user.email?.split('@')[0] || 'Cliente',
+            nom: '',
+            email: user.email,
+            premiere_visite: new Date().toISOString().split('T')[0],
+          }).select().single()
+          cId = newC?.id || ''
+        }
+        setClienteId(cId)
+      }
+    }
+
+    if (!cId) { setSaving(false); return }
+
     const dateStr = `${curYear}-${String(curMonth+1).padStart(2,'0')}-${String(selectedDay).padStart(2,'0')}`
     const [h, min] = selectedHeure.replace('h',':').split(':').map(Number)
     const totalMin = h*60 + (min||0) + selectedPrestation.duree_minutes
@@ -93,7 +123,7 @@ function ReserverContent() {
 
     await supabase.from('rendez_vous').insert({
       prestataire_id: selectedPrestataire.id,
-      cliente_id: clienteId,
+      cliente_id: cId,
       prestation_id: selectedPrestation.id,
       date_rdv: dateStr,
       heure_debut: selectedHeure.replace('h',':').padEnd(5,'0'),
