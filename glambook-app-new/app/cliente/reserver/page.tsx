@@ -29,10 +29,21 @@ export default function ReserverPage() {
   async function init() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/auth/login'); return }
-    const { data: cliente } = await supabase.from('clientes').select('id,prestataire_id').eq('user_id', user.id).single()
+    const { data: cliente } = await supabase.from('clientes').select('id,prestataire_id').eq('user_id', user.id).maybeSingle()
     if (!cliente) return
     setClienteId(cliente.id)
-    const { data: pres } = await supabase.from('prestataires').select('*').eq('id', cliente.prestataire_id).single()
+
+    // Récupérer prestataire_id depuis l'URL si dispo (venant du profil public)
+    const urlParams = new URLSearchParams(window.location.search)
+    const presIdFromUrl = urlParams.get('prestataire_id')
+    const presId = presIdFromUrl || cliente.prestataire_id
+
+    // Si on vient du profil public, lier la prestataire à la cliente
+    if (presIdFromUrl && presIdFromUrl !== cliente.prestataire_id) {
+      await supabase.from('clientes').update({ prestataire_id: presIdFromUrl }).eq('id', cliente.id)
+    }
+
+    const { data: pres } = await supabase.from('prestataires').select('*').eq('id', presId).maybeSingle()
     setSelectedPrestataire(pres)
     if (pres) {
       const { data } = await supabase.from('prestations').select('*').eq('prestataire_id', pres.id).eq('actif', true).order('categorie')
